@@ -21,6 +21,7 @@ function CreatePage() {
   const nav = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [timePerQuestion, setTimePerQuestion] = useState(20);
   const [questions, setQuestions] = useState<Question[]>([blankQ()]);
 
   const updateQ = (i: number, patch: Partial<Question>) => {
