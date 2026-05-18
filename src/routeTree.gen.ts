@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as QuizQuizIdRouteImport } from './routes/quiz.$quizId'
+import { Route as HostQuizIdRouteImport } from './routes/host.$quizId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -34,17 +35,24 @@ const QuizQuizIdRoute = QuizQuizIdRouteImport.update({
   path: '/quiz/$quizId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HostQuizIdRoute = HostQuizIdRouteImport.update({
+  id: '/host/$quizId',
+  path: '/host/$quizId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
+  '/host/$quizId': typeof HostQuizIdRoute
   '/quiz/$quizId': typeof QuizQuizIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
+  '/host/$quizId': typeof HostQuizIdRoute
   '/quiz/$quizId': typeof QuizQuizIdRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,28 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/login': typeof LoginRoute
+  '/host/$quizId': typeof HostQuizIdRoute
   '/quiz/$quizId': typeof QuizQuizIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/create' | '/login' | '/quiz/$quizId'
+  fullPaths: '/' | '/create' | '/login' | '/host/$quizId' | '/quiz/$quizId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create' | '/login' | '/quiz/$quizId'
-  id: '__root__' | '/' | '/create' | '/login' | '/quiz/$quizId'
+  to: '/' | '/create' | '/login' | '/host/$quizId' | '/quiz/$quizId'
+  id:
+    | '__root__'
+    | '/'
+    | '/create'
+    | '/login'
+    | '/host/$quizId'
+    | '/quiz/$quizId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateRoute: typeof CreateRoute
   LoginRoute: typeof LoginRoute
+  HostQuizIdRoute: typeof HostQuizIdRoute
   QuizQuizIdRoute: typeof QuizQuizIdRoute
 }
 
@@ -99,6 +115,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QuizQuizIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/host/$quizId': {
+      id: '/host/$quizId'
+      path: '/host/$quizId'
+      fullPath: '/host/$quizId'
+      preLoaderRoute: typeof HostQuizIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -106,8 +129,19 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateRoute: CreateRoute,
   LoginRoute: LoginRoute,
+  HostQuizIdRoute: HostQuizIdRoute,
   QuizQuizIdRoute: QuizQuizIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
