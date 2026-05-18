@@ -79,6 +79,18 @@ function CreatePage() {
             rows={2}
             className="w-full resize-none rounded-lg bg-muted px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-bold uppercase tracking-wide text-muted-foreground">⏱ Time per question</label>
+            <input
+              type="number"
+              min={5}
+              max={300}
+              value={timePerQuestion}
+              onChange={(e) => setTimePerQuestion(Math.max(5, Math.min(300, Number(e.target.value) || 20)))}
+              className="w-24 rounded-lg border-2 border-border bg-background px-3 py-1.5 text-sm font-bold focus:outline-none focus:border-primary"
+            />
+            <span className="text-sm text-muted-foreground">seconds</span>
+          </div>
         </div>
 
         <div className="mt-8 space-y-5">
