@@ -16,9 +16,46 @@ export interface Quiz {
   cover?: string;
   questions: Question[];
   createdAt: number;
+  timePerQuestion?: number; // seconds, default 20
 }
 
 const KEY = "quizly.quizzes.v1";
+const ROOMS_KEY = "quizly.rooms.v1";
+
+export interface RoomPlayer {
+  id: string;
+  name: string;
+  score: number;
+  answeredIdx: number; // last question index answered
+  finished: boolean;
+}
+
+export interface Room {
+  code: string;
+  quizId: string;
+  hostId: string;
+  players: RoomPlayer[];
+  started: boolean;
+  startedAt?: number;
+  createdAt: number;
+}
+
+export function loadRooms(): Record<string, Room> {
+  if (typeof window === "undefined") return {};
+  try { return JSON.parse(localStorage.getItem(ROOMS_KEY) || "{}"); } catch { return {}; }
+}
+export function saveRoom(room: Room) {
+  const all = loadRooms();
+  all[room.code] = room;
+  localStorage.setItem(ROOMS_KEY, JSON.stringify(all));
+  try { new BroadcastChannel("quizly-rooms").postMessage({ code: room.code }); } catch {}
+}
+export function getRoom(code: string): Room | undefined {
+  return loadRooms()[code.toUpperCase()];
+}
+export function generateRoomCode(): string {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
 const AUTH_KEY = "quizly.auth.v1";
 
 export function loadQuizzes(): Quiz[] {
