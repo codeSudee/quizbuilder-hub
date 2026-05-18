@@ -85,9 +85,12 @@ function Index() {
                 </div>
                 <h3 className="mt-2 text-xl font-extrabold tracking-tight">{q.title}</h3>
                 <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{q.description || "No description"}</p>
-                <div className="mt-5 flex gap-2">
+                <div className="mt-5 flex flex-wrap gap-2">
                   <Link to="/quiz/$quizId" params={{ quizId: q.id }} className="flex-1 rounded-lg bg-primary px-3 py-2 text-center text-sm font-bold text-primary-foreground">
                     Play
+                  </Link>
+                  <Link to="/host/$quizId" params={{ quizId: q.id }} className="rounded-lg border-2 border-primary px-3 py-2 text-sm font-bold text-primary hover:bg-primary/5">
+                    Host live
                   </Link>
                   <button
                     onClick={() => { if (confirm("Delete this quiz?")) { deleteQuiz(q.id); refresh(); } }}
