@@ -54,7 +54,7 @@ function CreatePage() {
     const cleaned = questions.filter((q) => q.prompt.trim() && (q.type !== "mcq" || (q.options && q.options.every((o) => o.trim()))));
     if (cleaned.length === 0) return alert("Add at least one complete question");
     const id = uid();
-    addQuiz({ id, title: title.trim(), description: description.trim(), questions: cleaned, createdAt: Date.now() });
+    addQuiz({ id, title: title.trim(), description: description.trim(), questions: cleaned, createdAt: Date.now(), timePerQuestion });
     nav({ to: "/quiz/$quizId", params: { quizId: id } });
   };
 
