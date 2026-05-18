@@ -14,6 +14,7 @@ import { Route as JoinRouteImport } from './routes/join'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as QuizQuizIdRouteImport } from './routes/quiz.$quizId'
+import { Route as JoinCodeRouteImport } from './routes/join.$code'
 import { Route as HostQuizIdRouteImport } from './routes/host.$quizId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -41,6 +42,11 @@ const QuizQuizIdRoute = QuizQuizIdRouteImport.update({
   path: '/quiz/$quizId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinCodeRoute = JoinCodeRouteImport.update({
+  id: '/$code',
+  path: '/$code',
+  getParentRoute: () => JoinRoute,
+} as any)
 const HostQuizIdRoute = HostQuizIdRouteImport.update({
   id: '/host/$quizId',
   path: '/host/$quizId',
@@ -50,26 +56,29 @@ const HostQuizIdRoute = HostQuizIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
-  '/join': typeof JoinRoute
+  '/join': typeof JoinRouteWithChildren
   '/login': typeof LoginRoute
   '/host/$quizId': typeof HostQuizIdRoute
+  '/join/$code': typeof JoinCodeRoute
   '/quiz/$quizId': typeof QuizQuizIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
-  '/join': typeof JoinRoute
+  '/join': typeof JoinRouteWithChildren
   '/login': typeof LoginRoute
   '/host/$quizId': typeof HostQuizIdRoute
+  '/join/$code': typeof JoinCodeRoute
   '/quiz/$quizId': typeof QuizQuizIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
-  '/join': typeof JoinRoute
+  '/join': typeof JoinRouteWithChildren
   '/login': typeof LoginRoute
   '/host/$quizId': typeof HostQuizIdRoute
+  '/join/$code': typeof JoinCodeRoute
   '/quiz/$quizId': typeof QuizQuizIdRoute
 }
 export interface FileRouteTypes {
@@ -80,9 +89,17 @@ export interface FileRouteTypes {
     | '/join'
     | '/login'
     | '/host/$quizId'
+    | '/join/$code'
     | '/quiz/$quizId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/create' | '/join' | '/login' | '/host/$quizId' | '/quiz/$quizId'
+  to:
+    | '/'
+    | '/create'
+    | '/join'
+    | '/login'
+    | '/host/$quizId'
+    | '/join/$code'
+    | '/quiz/$quizId'
   id:
     | '__root__'
     | '/'
@@ -90,13 +107,14 @@ export interface FileRouteTypes {
     | '/join'
     | '/login'
     | '/host/$quizId'
+    | '/join/$code'
     | '/quiz/$quizId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateRoute: typeof CreateRoute
-  JoinRoute: typeof JoinRoute
+  JoinRoute: typeof JoinRouteWithChildren
   LoginRoute: typeof LoginRoute
   HostQuizIdRoute: typeof HostQuizIdRoute
   QuizQuizIdRoute: typeof QuizQuizIdRoute
@@ -139,6 +157,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QuizQuizIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join/$code': {
+      id: '/join/$code'
+      path: '/$code'
+      fullPath: '/join/$code'
+      preLoaderRoute: typeof JoinCodeRouteImport
+      parentRoute: typeof JoinRoute
+    }
     '/host/$quizId': {
       id: '/host/$quizId'
       path: '/host/$quizId'
@@ -149,10 +174,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface JoinRouteChildren {
+  JoinCodeRoute: typeof JoinCodeRoute
+}
+
+const JoinRouteChildren: JoinRouteChildren = {
+  JoinCodeRoute: JoinCodeRoute,
+}
+
+const JoinRouteWithChildren = JoinRoute._addFileChildren(JoinRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateRoute: CreateRoute,
-  JoinRoute: JoinRoute,
+  JoinRoute: JoinRouteWithChildren,
   LoginRoute: LoginRoute,
   HostQuizIdRoute: HostQuizIdRoute,
   QuizQuizIdRoute: QuizQuizIdRoute,
