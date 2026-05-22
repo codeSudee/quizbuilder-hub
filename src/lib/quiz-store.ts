@@ -21,6 +21,31 @@ export interface Quiz {
 
 const KEY = "quizly.quizzes.v1";
 const ROOMS_KEY = "quizly.rooms.v1";
+const SCORES_KEY = "quizly.scores.v1";
+
+export interface ScoreEntry {
+  id: string;
+  quizId: string;
+  quizTitle: string;
+  player: string;
+  score: number;
+  total: number;
+  pct: number;
+  at: number;
+}
+
+export function loadScores(): ScoreEntry[] {
+  if (typeof window === "undefined") return [];
+  try { return JSON.parse(localStorage.getItem(SCORES_KEY) || "[]"); } catch { return []; }
+}
+export function saveScore(entry: Omit<ScoreEntry, "id" | "at">) {
+  const all = loadScores();
+  all.unshift({ ...entry, id: Math.random().toString(36).slice(2, 10), at: Date.now() });
+  localStorage.setItem(SCORES_KEY, JSON.stringify(all.slice(0, 500)));
+}
+export function clearScores() {
+  localStorage.removeItem(SCORES_KEY);
+}
 
 export interface RoomPlayer {
   id: string;
