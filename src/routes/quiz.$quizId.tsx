@@ -36,6 +36,24 @@ function PlayPage() {
     setQuiz(getQuiz(quizId) ?? null);
   }, [quizId]);
 
+  const savedRef = useRef(false);
+  useEffect(() => {
+    if (!done || !quiz || savedRef.current) return;
+    savedRef.current = true;
+    const total = quiz.questions.length;
+    const pct = total ? Math.round((score / total) * 100) : 0;
+    let playerName = "You";
+    if (roomCode && playerId) {
+      const room = getRoom(roomCode);
+      const me = room?.players.find((p) => p.id === playerId);
+      if (me?.name) playerName = me.name;
+    } else {
+      const u = getUser();
+      if (u?.name) playerName = u.name;
+    }
+    saveScore({ quizId: quiz.id, quizTitle: quiz.title, player: playerName, score, total, pct });
+  }, [done, quiz, score, roomCode, playerId]);
+
   const perQ = quiz?.timePerQuestion ?? 20;
 
   const updateRoomScore = useCallback((finalScore: number, finished: boolean, lastIdx: number) => {
