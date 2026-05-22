@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useParams, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getQuiz, getRoom, saveRoom, type Quiz, type Room } from "@/lib/quiz-store";
+import { getQuiz, getRoom, getUser, saveRoom, saveScore, type Quiz, type Room } from "@/lib/quiz-store";
 
 export const Route = createFileRoute("/quiz/$quizId")({
   component: PlayPage,
