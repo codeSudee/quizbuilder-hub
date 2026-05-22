@@ -160,6 +160,7 @@ function PlayPage() {
               ) : (
                 <Link to="/quiz/$quizId" params={{ quizId }} reloadDocument className="rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground">Play again</Link>
               )}
+              <Link to="/leaderboard" className="rounded-xl border-2 border-primary px-5 py-3 font-bold text-primary hover:bg-primary/5">Leaderboard</Link>
               <Link to="/" className="rounded-xl border-2 border-border px-5 py-3 font-bold">Back to library</Link>
             </div>
           </div>
