@@ -17,6 +17,7 @@ export function SiteHeader() {
         <nav className="flex items-center gap-2">
           <Link to="/" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted sm:inline">Browse</Link>
           <Link to="/join" className="rounded-lg px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted">Join</Link>
+          <Link to="/leaderboard" className="rounded-lg px-3 py-2 text-sm font-semibold text-foreground hover:bg-muted">Leaderboard</Link>
           <Link to="/create" className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-card hover:opacity-95">+ Create</Link>
           {user ? (
             <button

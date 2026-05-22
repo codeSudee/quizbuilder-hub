@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useParams, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getQuiz, getRoom, saveRoom, type Quiz, type Room } from "@/lib/quiz-store";
+import { getQuiz, getRoom, getUser, saveRoom, saveScore, type Quiz, type Room } from "@/lib/quiz-store";
 
 export const Route = createFileRoute("/quiz/$quizId")({
   component: PlayPage,
@@ -35,6 +35,24 @@ function PlayPage() {
   useEffect(() => {
     setQuiz(getQuiz(quizId) ?? null);
   }, [quizId]);
+
+  const savedRef = useRef(false);
+  useEffect(() => {
+    if (!done || !quiz || savedRef.current) return;
+    savedRef.current = true;
+    const total = quiz.questions.length;
+    const pct = total ? Math.round((score / total) * 100) : 0;
+    let playerName = "You";
+    if (roomCode && playerId) {
+      const room = getRoom(roomCode);
+      const me = room?.players.find((p) => p.id === playerId);
+      if (me?.name) playerName = me.name;
+    } else {
+      const u = getUser();
+      if (u?.name) playerName = u.name;
+    }
+    saveScore({ quizId: quiz.id, quizTitle: quiz.title, player: playerName, score, total, pct });
+  }, [done, quiz, score, roomCode, playerId]);
 
   const perQ = quiz?.timePerQuestion ?? 20;
 
@@ -142,6 +160,7 @@ function PlayPage() {
               ) : (
                 <Link to="/quiz/$quizId" params={{ quizId }} reloadDocument className="rounded-xl bg-primary px-5 py-3 font-bold text-primary-foreground">Play again</Link>
               )}
+              <Link to="/leaderboard" className="rounded-xl border-2 border-primary px-5 py-3 font-bold text-primary hover:bg-primary/5">Leaderboard</Link>
               <Link to="/" className="rounded-xl border-2 border-border px-5 py-3 font-bold">Back to library</Link>
             </div>
           </div>
