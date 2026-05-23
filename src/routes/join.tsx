@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getRoom } from "@/lib/quiz-store";
+import { fetchRoom } from "@/lib/rooms-remote";
 
 export const Route = createFileRoute("/join")({
   component: JoinPage,
@@ -11,12 +11,22 @@ function JoinPage() {
   const nav = useNavigate();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const go = () => {
+  const go = async () => {
     const c = code.trim();
     if (!/^\d{4}$/.test(c)) { setError("Enter a 4-digit code"); return; }
-    if (!getRoom(c)) { setError("Room not found"); return; }
-    nav({ to: "/join/$code", params: { code: c } });
+    setLoading(true);
+    setError("");
+    try {
+      const r = await fetchRoom(c);
+      if (!r) { setError("Room not found. Double-check the code with the host."); return; }
+      nav({ to: "/join/$code", params: { code: c } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not check room");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,11 +43,11 @@ function JoinPage() {
             maxLength={4}
             inputMode="numeric"
             className="w-full rounded-xl border-2 border-border bg-background px-4 py-6 text-center text-5xl font-extrabold tracking-[0.5em] focus:border-primary focus:outline-none"
-            onKeyDown={(e) => e.key === "Enter" && go()}
+            onKeyDown={(e) => e.key === "Enter" && !loading && go()}
             autoFocus
           />
           {error && <p className="mt-3 text-sm font-semibold text-destructive text-center">{error}</p>}
-          <button onClick={go} className="mt-6 w-full rounded-xl bg-primary py-3 font-bold text-primary-foreground shadow-card">Join</button>
+          <button onClick={go} disabled={loading} className="mt-6 w-full rounded-xl bg-primary py-3 font-bold text-primary-foreground shadow-card disabled:opacity-50">{loading ? "Checking…" : "Join"}</button>
         </div>
       </main>
     </div>
