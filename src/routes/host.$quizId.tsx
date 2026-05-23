@@ -1,7 +1,15 @@
 import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
-import { generateRoomCode, getQuiz, getRoom, saveRoom, uid, type Quiz, type Room } from "@/lib/quiz-store";
+import { getQuiz, uid, type Quiz } from "@/lib/quiz-store";
+import {
+  createRoomRemote,
+  fetchPlayers,
+  startRoomRemote,
+  subscribeRoom,
+  type RemotePlayer,
+  type RemoteRoom,
+} from "@/lib/rooms-remote";
 
 export const Route = createFileRoute("/host/$quizId")({
   component: HostPage,
@@ -11,55 +19,99 @@ function HostPage() {
   const { quizId } = useParams({ from: "/host/$quizId" });
   const nav = useNavigate();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [room, setRoom] = useState<Room | null>(null);
+  const [room, setRoom] = useState<RemoteRoom | null>(null);
+  const [players, setPlayers] = useState<RemotePlayer[]>([]);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
 
+  // Create the room (once) — guard against StrictMode double effect
   useEffect(() => {
     const q = getQuiz(quizId);
     setQuiz(q ?? null);
     if (!q) return;
-    // Create room
-    let code = generateRoomCode();
-    while (getRoom(code)) code = generateRoomCode();
-    const r: Room = {
-      code,
-      quizId,
-      hostId: uid(),
-      players: [],
-      started: false,
-      createdAt: Date.now(),
+    let cancelled = false;
+    const key = `quizly.host-room-for.${quizId}`;
+    const existing = typeof window !== "undefined" ? sessionStorage.getItem(key) : null;
+    (async () => {
+      try {
+        if (existing) {
+          const parsed = JSON.parse(existing) as RemoteRoom;
+          if (!cancelled) setRoom(parsed);
+          return;
+        }
+        const r = await createRoomRemote(q, uid());
+        if (cancelled) return;
+        sessionStorage.setItem(key, JSON.stringify(r));
+        setRoom(r);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to create room");
+      }
+    })();
+    return () => {
+      cancelled = true;
     };
-    saveRoom(r);
-    setRoom(r);
   }, [quizId]);
 
-  // Poll for players joining
+  // Realtime players
   useEffect(() => {
     if (!room) return;
-    const tick = () => {
-      const fresh = getRoom(room.code);
-      if (fresh) setRoom(fresh);
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const p = await fetchPlayers(room.code);
+        if (!cancelled) setPlayers(p);
+      } catch {}
     };
-    const id = setInterval(tick, 1000);
-    let bc: BroadcastChannel | null = null;
-    try {
-      bc = new BroadcastChannel("quizly-rooms");
-      bc.onmessage = tick;
-    } catch {}
-    return () => { clearInterval(id); bc?.close(); };
+    refresh();
+    const unsub = subscribeRoom(room.code, refresh);
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, [room?.code]);
 
   if (!quiz) {
-    return <div className="min-h-screen bg-background"><SiteHeader /><p className="p-10 text-center">Quiz not found.</p></div>;
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <p className="p-10 text-center">Quiz not found.</p>
+      </div>
+    );
   }
-  if (!room) return null;
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <p className="p-10 text-center text-destructive font-bold">{error}</p>
+      </div>
+    );
+  }
+
+  if (!room) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SiteHeader />
+        <p className="p-10 text-center text-muted-foreground">Creating room…</p>
+      </div>
+    );
+  }
 
   const joinLink = `${window.location.origin}/join/${room.code}`;
 
-  const startGame = () => {
-    const updated: Room = { ...room, started: true, startedAt: Date.now() };
-    saveRoom(updated);
-    // Host plays too — register as a player
-    nav({ to: "/room/$code", params: { code: room.code } });
+  const startGame = async () => {
+    try {
+      await startRoomRemote(room.code);
+      nav({ to: "/room/$code", params: { code: room.code } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start");
+    }
+  };
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(joinLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   return (
@@ -77,22 +129,22 @@ function HostPage() {
             <div className="flex w-full max-w-md gap-2">
               <input readOnly value={joinLink} className="flex-1 rounded-lg border-2 border-border bg-muted px-3 py-2 text-sm" />
               <button
-                onClick={() => { navigator.clipboard.writeText(joinLink); }}
+                onClick={copy}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground"
-              >Copy</button>
+              >{copied ? "Copied!" : "Copy"}</button>
             </div>
           </div>
         </div>
 
         <div className="mt-8 rounded-2xl border-2 border-border bg-card p-6 shadow-card">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-extrabold">Players ({room.players.length})</h2>
-            <span className="text-sm text-muted-foreground">Waiting for players to join...</span>
+            <h2 className="text-xl font-extrabold">Players ({players.length})</h2>
+            <span className="text-sm text-muted-foreground">Live · updates instantly</span>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            {room.players.length === 0 ? (
+            {players.length === 0 ? (
               <p className="text-sm text-muted-foreground">No one has joined yet.</p>
-            ) : room.players.map((p) => (
+            ) : players.map((p) => (
               <span key={p.id} className="rounded-full bg-secondary px-4 py-1.5 text-sm font-bold">{p.name}</span>
             ))}
           </div>
@@ -101,12 +153,10 @@ function HostPage() {
         <div className="mt-6 flex justify-end">
           <button
             onClick={startGame}
-            disabled={room.players.length === 0}
+            disabled={players.length === 0}
             className="rounded-xl bg-primary px-6 py-3 font-bold text-primary-foreground shadow-card disabled:opacity-40"
           >Start game →</button>
         </div>
-
-        <p className="mt-4 text-xs text-muted-foreground">Note: this prototype syncs players within the same browser via local storage. For cross-device play you'd connect a real backend.</p>
       </main>
     </div>
   );
