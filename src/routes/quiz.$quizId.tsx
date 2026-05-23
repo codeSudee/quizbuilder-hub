@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useParams, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getQuiz, getRoom, getUser, saveRoom, saveScore, type Quiz, type Room } from "@/lib/quiz-store";
+import { getQuiz, getUser, saveScore, type Quiz } from "@/lib/quiz-store";
+import { fetchPlayers, fetchRoom, updatePlayerRemote } from "@/lib/rooms-remote";
 
 export const Route = createFileRoute("/quiz/$quizId")({
   component: PlayPage,
@@ -23,6 +24,7 @@ function PlayPage() {
   const { quizId } = useParams({ from: "/quiz/$quizId" });
   const { room: roomCode, player: playerId } = useSearch({ from: "/quiz/$quizId" });
   const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [playerName, setPlayerName] = useState<string>("");
   const [idx, setIdx] = useState(0);
   const [value, setValue] = useState("");
   const [score, setScore] = useState(0);
@@ -33,8 +35,29 @@ function PlayPage() {
   const advancingRef = useRef(false);
 
   useEffect(() => {
-    setQuiz(getQuiz(quizId) ?? null);
-  }, [quizId]);
+    let cancelled = false;
+    (async () => {
+      if (roomCode) {
+        try {
+          const r = await fetchRoom(roomCode);
+          if (cancelled) return;
+          setQuiz(r?.quiz_data ?? null);
+          if (playerId) {
+            const players = await fetchPlayers(roomCode);
+            const me = players.find((p) => p.id === playerId);
+            if (me && !cancelled) setPlayerName(me.name);
+          }
+        } catch {
+          if (!cancelled) setQuiz(null);
+        }
+      } else {
+        setQuiz(getQuiz(quizId) ?? null);
+        const u = getUser();
+        if (u?.name) setPlayerName(u.name);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [quizId, roomCode, playerId]);
 
   const savedRef = useRef(false);
   useEffect(() => {
@@ -42,31 +65,14 @@ function PlayPage() {
     savedRef.current = true;
     const total = quiz.questions.length;
     const pct = total ? Math.round((score / total) * 100) : 0;
-    let playerName = "You";
-    if (roomCode && playerId) {
-      const room = getRoom(roomCode);
-      const me = room?.players.find((p) => p.id === playerId);
-      if (me?.name) playerName = me.name;
-    } else {
-      const u = getUser();
-      if (u?.name) playerName = u.name;
-    }
-    saveScore({ quizId: quiz.id, quizTitle: quiz.title, player: playerName, score, total, pct });
-  }, [done, quiz, score, roomCode, playerId]);
+    saveScore({ quizId: quiz.id, quizTitle: quiz.title, player: playerName || "You", score, total, pct });
+  }, [done, quiz, score, playerName]);
 
   const perQ = quiz?.timePerQuestion ?? 20;
 
   const updateRoomScore = useCallback((finalScore: number, finished: boolean, lastIdx: number) => {
     if (!roomCode || !playerId) return;
-    const room = getRoom(roomCode);
-    if (!room) return;
-    const updated: Room = {
-      ...room,
-      players: room.players.map((p) =>
-        p.id === playerId ? { ...p, score: finalScore, answeredIdx: lastIdx, finished } : p,
-      ),
-    };
-    saveRoom(updated);
+    updatePlayerRemote(playerId, { score: finalScore, answered_idx: lastIdx, finished }).catch(() => {});
   }, [roomCode, playerId]);
 
   const normalize = (s: string) => s.trim().toLowerCase();
